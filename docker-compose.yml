@@ -1,0 +1,51 @@
+version: '3'
+services:
+  web-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    networks:
+      - drone-service-network
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "8091:8091"
+
+  database:
+    image: postgres
+    restart: always
+    ports:
+      - "5439:5432"
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=drone-service-database
+    volumes:
+      - ./mount/database:/var/lib/postgresql/data
+    networks:
+      - drone-service-network
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "root", "-d", "drone-service-database" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    ports:
+      - "8090:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    volumes:
+      - ./mount/pgadmin:/var/lib/pgadmin
+    networks:
+      - drone-service-network
+    depends_on:
+      database:
+        condition: service_healthy
+
+networks:
+  drone-service-network:
